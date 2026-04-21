@@ -5828,8 +5828,20 @@ pub fn bind_and_rewrite_expr<'a>(
                             id.as_str()
                         );
                     }
+                    // search joined_tables first, then outer_query_refs, returning
+                    // (internal_id, &table) of the first match.
                     let matching_tbl = referenced_tables
-                        .find_table_and_internal_id_by_identifier(&normalized_table_name);
+                        .joined_tables()
+                        .iter()
+                        .find(|t| t.identifier == normalized_table_name)
+                        .map(|t| (t.internal_id, &t.table))
+                        .or_else(|| {
+                            referenced_tables
+                                .outer_query_refs()
+                                .iter()
+                                .find(|t| t.identifier == normalized_table_name)
+                                .map(|t| (t.internal_id, &t.table))
+                        });
                     if matching_tbl.is_none() {
                         // CTEs preplanned for subquery FROM visibility are kept as
                         // definition-only outer refs. They are not valid column sources
@@ -5954,7 +5966,17 @@ pub fn bind_and_rewrite_expr<'a>(
                     // For now, we'll error if the table isn't already in the referenced tables
                     let normalized_tbl_name = normalize_ident(tbl_name.as_str());
                     let matching_tbl = referenced_tables
-                        .find_table_and_internal_id_by_identifier(&normalized_tbl_name);
+                        .joined_tables()
+                        .iter()
+                        .find(|t| t.identifier == normalized_tbl_name)
+                        .map(|t| (t.internal_id, &t.table))
+                        .or_else(|| {
+                            referenced_tables
+                                .outer_query_refs()
+                                .iter()
+                                .find(|t| t.identifier == normalized_tbl_name)
+                                .map(|t| (t.internal_id, &t.table))
+                        });
 
                     if let Some((tbl_id, _)) = matching_tbl {
                         // Table is already in referenced tables, use existing internal ID
