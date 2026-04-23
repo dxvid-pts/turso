@@ -33,7 +33,7 @@ impl IoOperations for Arc<dyn turso_core::IO> {
         Ok(DatabaseTape::new_with_opts(clean, opts))
     }
     fn try_open(&self, path: &str) -> Result<Option<Arc<dyn turso_core::File>>> {
-        match self.open_file(path, OpenFlags::None, false) {
+        match self.open_file(path, OpenFlags::ReadOnly | OpenFlags::NoLock, false) {
             Ok(file) => Ok(Some(file)),
             Err(LimboError::CompletionError(turso_core::CompletionError::IOError(
                 std::io::ErrorKind::NotFound,
